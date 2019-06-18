@@ -16,3 +16,7 @@ data is dually annotated by 4 other domain experts
 to evaluate the user agreements._  
 * __entities__: Task, Method, Metric, Material, Other-ScientificTerm and Generic  
 * __relation types__: Compare, Part-of, Conjunction, Evaluate-for, Feature-of, Used-for, Hyponym-Of
+
+## explore data
+`cd json`  
+`cat train.json | jq . | less`
