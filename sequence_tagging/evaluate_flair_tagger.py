@@ -2,8 +2,7 @@ from pprint import pprint
 from typing import List
 
 import torch
-from flair.data import TaggedCorpus, Sentence, Token
-from flair.data_fetcher import NLPTaskDataFetcher, NLPTask
+from flair.data import Sentence, Corpus
 from flair.embeddings import TokenEmbeddings, WordEmbeddings, StackedEmbeddings
 from flair.training_utils import clear_embeddings
 from sklearn import metrics
@@ -27,7 +26,11 @@ def evaluate_sequence_tagger(model:SequenceTagger,
         for batch in batches:
             batch_no += 1
 
-            pred_tags, loss = model.forward_labels_and_loss(batch)
+            with torch.no_grad():
+                features = model.forward(batch)
+                loss = model._calculate_loss(features, batch)
+                pred_tags = model._obtain_labels(features, batch)
+
             eval_loss += loss
 
             for (sentence, pred_sent_tags) in zip(batch, pred_tags):
@@ -66,7 +69,7 @@ if __name__ == '__main__':
     data_path = 'data/scierc_data/json/'
     # corpus: TaggedCorpus = NLPTaskDataFetcher.load_corpus(NLPTask.UD_ENGLISH)
     from sequence_tagging.flair_scierc_ner import read_scierc_data_to_FlairSentences
-    corpus: TaggedCorpus = TaggedCorpus(
+    corpus = Corpus(
         train=read_scierc_data_to_FlairSentences('%strain.json' % data_path),
         dev=read_scierc_data_to_FlairSentences('%sdev.json' % data_path),
         test=read_scierc_data_to_FlairSentences('%stest.json' % data_path), name='scierc')
@@ -85,7 +88,7 @@ if __name__ == '__main__':
     embeddings: StackedEmbeddings = StackedEmbeddings(embeddings=embedding_types)
 
 
-    tagger = SequenceTagger = SequenceTagger.load_from_file(
+    tagger = SequenceTagger = SequenceTagger.load(
         'sequence_tagging/resources/taggers/scierc-ner/final-model.pt')
 
     pprint(evaluate_sequence_tagger(tagger, corpus.train))

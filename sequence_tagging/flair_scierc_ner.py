@@ -5,18 +5,18 @@ from typing import List, Dict
 
 from commons import data_io
 from flair.data_fetcher import NLPTaskDataFetcher, NLPTask
-from flair.data import TaggedCorpus, Sentence, Token
+from flair.data import Sentence, Token, Corpus
 from flair.embeddings import TokenEmbeddings, WordEmbeddings, StackedEmbeddings, CharLMEmbeddings, CharacterEmbeddings
 from flair.training_utils import EvaluationMetric
 from flair.visual.training_curves import Plotter
-
+from torch.utils.data import Dataset
 
 TAG_TYPE = 'ner'
 
 
 def read_scierc_data_to_FlairSentences(
     jsonl_file:str
-    )->List[Sentence]:
+    )->Dataset:
     def prefix_to_BIOES(label,start,end,current_index):
         if end - start > 0:
             if current_index == start:
@@ -51,14 +51,15 @@ def read_scierc_data_to_FlairSentences(
 
         return sentences
 
-    return [sent for d in data_io.read_jsons_from_file(jsonl_file) for sent in build_sentences(d)]
+    dataset:Dataset = [sent for d in data_io.read_jsons_from_file(jsonl_file) for sent in build_sentences(d)]
+    return dataset
 
 
 if __name__ == '__main__':
     # 1. get the corpus
     data_path = 'data/scierc_data/json/'
 
-    corpus: TaggedCorpus = TaggedCorpus(
+    corpus = Corpus(
         train=read_scierc_data_to_FlairSentences('%strain.json' % data_path),
         dev=read_scierc_data_to_FlairSentences('%sdev.json' % data_path),
         test=read_scierc_data_to_FlairSentences('%stest.json' % data_path), name='scierc')
@@ -101,12 +102,12 @@ if __name__ == '__main__':
     # initialize trainer
     from flair.trainers import ModelTrainer
 
-    trainer: ModelTrainer = ModelTrainer(tagger, corpus,optimizer=torch.optim.RMSprop)
+    trainer: ModelTrainer = ModelTrainer(tagger, corpus,optimizer=torch.optim.Adam)
 
     save_path = 'sequence_tagging/resources/taggers/scierc-ner'
     trainer.train('%s' % save_path, EvaluationMetric.MICRO_F1_SCORE, learning_rate=0.001,
                   mini_batch_size=32,
-                  max_epochs=10, test_mode=False)
+                  max_epochs=1)
 
     plotter = Plotter()
     plotter.plot_training_curves('%s/loss.tsv' % save_path)
