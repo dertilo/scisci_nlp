@@ -121,7 +121,6 @@ for line in f:
             sent = sent + " ".join(sentence[index:begin])
             sent = sent + " "
             nner = " ".join(sentence[begin:end])
-
             first_index = len(sent)
             last_index = first_index + len(nner)
             sent = sent + nner + " "
@@ -135,5 +134,7 @@ for line in f:
             dic["entities"] = ll
             TRAIN_DATA.append((sent, dic))
         lll = lll + len(sentence)
+
+
 print(len(TRAIN_DATA))
 pickle.dump(TRAIN_DATA,open("DEV_DATA_json.MODEL","wb"))

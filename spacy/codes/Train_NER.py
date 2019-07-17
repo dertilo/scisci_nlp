@@ -19,7 +19,6 @@ def train_spacy(data, iterations):
     for _, annotations in TRAIN_DATA:
         for ent in annotations.get('entities'):
             ner.add_label(ent[2])
-    counter = 0
     # get names of other pipes to disable them during training
     other_pipes = [pipe for pipe in nlp.pipe_names if pipe != 'ner']
     with nlp.disable_pipes(*other_pipes):  # only train NER
@@ -37,10 +36,8 @@ def train_spacy(data, iterations):
                     sgd=optimizer,  # callable to update weights
                     losses=losses)
                 except:
-                    counter+=1
                     pass
             print(losses)
-            #print(counter)
     return nlp,counter
 
 

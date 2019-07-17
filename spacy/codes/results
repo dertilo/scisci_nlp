@@ -1,0 +1,10 @@
+Default word embedding
+50 iteration
+Results on Test Data:
+    {'uas': 0.0, 'las': 0.0, 'ents_p': 51.130911583276216, 'ents_r': 44.27299703264095, 'ents_f': 47.45547073791349, 'tags_acc': 0.0, 'token_acc': 100.0}
+
+
+Default word embedding
+150 iteration
+Results on Test Data:
+    {'uas': 0.0, 'las': 0.0, 'ents_p': 52.98408488063661, 'ents_r': 47.41839762611276, 'ents_f': 50.04697776385845, 'tags_acc': 0.0, 'token_acc': 100.0}
