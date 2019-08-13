@@ -10,17 +10,19 @@ import flair.datasets
 from flair.data import Dictionary
 from spacy.tokenizer import Tokenizer
 
-from sequence_tagging.evaluate_flair_tagger import calc_seqtag_eval_scores
 from sequence_tagging.flair_scierc_ner import read_scierc_data_to_FlairSentences
-from sequence_tagging.seq_tag_util import bilou2bio, spanwise_pr_re_f1
+from sequence_tagging.seq_tag_util import bilou2bio, spanwise_pr_re_f1, calc_seqtag_tokenwise_scores
 
 
 class SpacyCrfSuiteTagger(object):
 
     def __init__(self,
                  nlp = spacy.load('en_core_web_sm',disable=['parser']),
-                 verbose = False
+                 verbose = False,
+                 c1=None,
+                 c2=None,
         ):
+        self.c1, self.c2 = c1,c2
         self.spacy_nlp = nlp
         infix_re = re.compile(r'\s')
         self.spacy_nlp.tokenizer = Tokenizer(nlp.vocab, infix_finditer=infix_re.finditer)
@@ -41,7 +43,7 @@ class SpacyCrfSuiteTagger(object):
         if self.verbose:
             print('spacy-processing train-data took: %0.2f'%(time()-start))
 
-        self.crf = sklearn_crfsuite.CRF(algorithm='lbfgs', c1=0.3, c2=0.5, max_iterations=200, all_possible_transitions=True)
+        self.crf = sklearn_crfsuite.CRF(algorithm='lbfgs', c1=self.c1, c2=self.c2, max_iterations=200, all_possible_transitions=True)
         targets = [[tag for token, tag in datum] for datum in data]
         start = time()
         self.crf.fit(processed_data, targets)
@@ -111,16 +113,16 @@ if __name__ == '__main__':
     y_pred = [bilou2bio([tag for tag in datum]) for datum in y_pred]
     targets = [bilou2bio([tag for token, tag in datum]) for datum in train_data]
     pprint(Counter([t for tags in targets for t in tags]))
-    pprint('train-f1-macro: %0.2f' % calc_seqtag_eval_scores(targets, y_pred)['f1-macro'])
-    pprint('train-f1-micro: %0.2f' % calc_seqtag_eval_scores(targets, y_pred)['f1-micro'])
+    pprint('train-f1-macro: %0.2f' % calc_seqtag_tokenwise_scores(targets, y_pred)['f1-macro'])
+    pprint('train-f1-micro: %0.2f' % calc_seqtag_tokenwise_scores(targets, y_pred)['f1-micro'])
     _,_,f1 = spanwise_pr_re_f1(y_pred, targets)
     pprint('train-f1-spanwise: %0.2f' % f1)
 
     y_pred = tagger.predict([[token for token, tag in datum] for datum in test_data])
     y_pred = [bilou2bio([tag for tag in datum]) for datum in y_pred]
     targets = [bilou2bio([tag for token, tag in datum]) for datum in test_data]
-    pprint('test-f1-macro: %0.2f' % calc_seqtag_eval_scores(targets, y_pred)['f1-macro'])
-    pprint('test-f1-micro: %0.2f' % calc_seqtag_eval_scores(targets, y_pred)['f1-micro'])
+    pprint('test-f1-macro: %0.2f' % calc_seqtag_tokenwise_scores(targets, y_pred)['f1-macro'])
+    pprint('test-f1-micro: %0.2f' % calc_seqtag_tokenwise_scores(targets, y_pred)['f1-micro'])
     _,_,f1 = spanwise_pr_re_f1(y_pred, targets)
     pprint('test-f1-spanwise: %0.2f'%f1)
 
