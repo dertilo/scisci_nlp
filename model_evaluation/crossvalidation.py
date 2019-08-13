@@ -1,7 +1,11 @@
+import multiprocessing
+from functools import partial
 from typing import List
 import numpy as np
 from commons.util_methods import get_dict_paths, get_val, set_val
 from sklearn.model_selection import StratifiedShuffleSplit, ShuffleSplit
+
+from model_evaluation.non_daemon_pool import NonDaemonPool
 
 
 def score_splits(scorer,data,splits):
@@ -43,13 +47,51 @@ def calc_mean_and_std(eval_metrices):
     #     splitter = ShuffleSplit(n_splits=n_splits, test_size=test_size, random_state=111)
     #     splits = [(train,test) for train,test in splitter.split(X=range(len(data)))]
 
+def init_fun(data_supplier,score_fun):
+    global job
+    job = ScorerJob(data_supplier,score_fun)
+
+def call_job(args):
+    return job(args)
+
+global_data = None
+
+def fun(args,score_fun, data_supplier):
+    global global_data
+    if global_data is None:
+        global_data = data_supplier()
+    return score_fun(args,global_data)
+
+class ScorerJob(object):
+
+    def __init__(self,data_supplier,score_fun) -> None:
+        super().__init__()
+        self.data = data_supplier()
+        self.score_fun = score_fun
+
+    def __call__(self, splits):
+        return self.score_fun(splits,self.data)
+
 def calc_mean_std_scores(
-        data:List,
+        data_supplier,
         score_fun,
         splits,
+        n_jobs=0
     ):
-    scores = score_splits(score_fun,data, splits) # TODO: this can fail if to few labels and splitter splitted unluckily
+    scores = calc_scores(data_supplier, score_fun, splits, n_jobs)
+    assert len(scores) == len(splits)
+
     m_scores, std_scores = calc_mean_and_std(scores)
-    return {'m_scores':m_scores,
-            'std_scores':std_scores}
+    return {'m_scores':m_scores,'std_scores':std_scores}
+
+
+def calc_scores(data_supplier, score_fun, splits, n_jobs):
+    if n_jobs > 0:
+        with NonDaemonPool(processes=n_jobs) as p:
+            scores = [r for r in
+                      p.imap_unordered(partial(fun, score_fun=score_fun, data_supplier=data_supplier), splits)]
+    else:
+        data = data_supplier()
+        scores = [score_fun(split, data) for split in splits]
+    return scores
 
